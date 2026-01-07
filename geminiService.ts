@@ -2,6 +2,10 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { BrandContext, HistoryItem, MonthlyPlanItem } from "./types";
 
+/**
+ * This service uses the API key provided by the user in the BrandContext.
+ */
+
 const getSystemInstruction = (brand: BrandContext) => `
 You are a social media and WhatsApp assistant for an Indian MSME.
 Business Name: ${brand.businessName}
@@ -20,8 +24,13 @@ Rules:
 6. Use the business description to make content specific to their services.
 `;
 
+const getAI = (apiKey: string) => {
+  if (!apiKey) throw new Error("API Key is required to use this feature.");
+  return new GoogleGenAI({ apiKey });
+};
+
 export const generateTodayPost = async (brand: BrandContext, history: HistoryItem[]) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const previousThemes = history.slice(0, 5).map(h => h.content).join("\n");
   
   const prompt = `Give me a post for today. 
@@ -41,7 +50,7 @@ export const generateTodayPost = async (brand: BrandContext, history: HistoryIte
 };
 
 export const generateImagePromptForPost = async (brand: BrandContext, postContent: string) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Based on: "${postContent}", generate a structured image prompt JSON.`,
@@ -67,13 +76,12 @@ export const generateImagePromptForPost = async (brand: BrandContext, postConten
   try {
     return JSON.parse(text);
   } catch (e) {
-    console.error("Failed to parse JSON response:", e);
     return {};
   }
 };
 
 export const generateOffer = async (brand: BrandContext, productName: string, details: string) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const prompt = `Create an offer for "${productName}". Details: ${details}. Provide WhatsApp and Instagram versions.`;
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -84,7 +92,7 @@ export const generateOffer = async (brand: BrandContext, productName: string, de
 };
 
 export const generateReply = async (brand: BrandContext, customerMessage: string) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Reply to: "${customerMessage}". Focus on helpful intent.`,
@@ -94,7 +102,7 @@ export const generateReply = async (brand: BrandContext, customerMessage: string
 };
 
 export const generateBroadcast = async (brand: BrandContext) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Short WhatsApp broadcast message for today. Non-spammy.`,
@@ -104,7 +112,7 @@ export const generateBroadcast = async (brand: BrandContext) => {
 };
 
 export const generateImagePrompt = async (brand: BrandContext, topic: string) => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Generate an image prompt for: ${topic}. Format as JSON.`,
@@ -129,13 +137,12 @@ export const generateImagePrompt = async (brand: BrandContext, topic: string) =>
   try {
     return JSON.parse(text);
   } catch (e) {
-    console.error("Failed to parse JSON response:", e);
     return {};
   }
 };
 
 export const generateMonthlyPlan = async (brand: BrandContext): Promise<MonthlyPlanItem[]> => {
-  const ai = new GoogleGenAI({ apiKey: brand.apiKey });
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: "30-day social media plan JSON.",
@@ -160,7 +167,6 @@ export const generateMonthlyPlan = async (brand: BrandContext): Promise<MonthlyP
   try {
     return JSON.parse(text);
   } catch (e) {
-    console.error("Failed to parse monthly plan JSON:", e);
     return [];
   }
 };

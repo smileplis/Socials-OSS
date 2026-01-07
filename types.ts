@@ -8,8 +8,8 @@ export interface BrandContext {
   city: string;
   language: Language;
   tone: Tone;
-  apiKey: string; // New required field for user-provided API key
   businessDescription?: string;
+  apiKey: string;
 }
 
 export interface HistoryItem {
