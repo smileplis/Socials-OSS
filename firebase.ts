@@ -45,32 +45,49 @@ const getEnvVar = (key: string): string => {
 
 /**
  * Smart Parser for Firebase Config
- * Handles both strict JSON and the raw JS snippet copied from Firebase Console
+ * Robustly handles raw JS copy-paste from Firebase Console
  */
 const parseFirebaseConfig = (input: string) => {
   if (!input) return null;
   
   try {
-    // 1. Try strict JSON parse first
+    // 1. Try strict JSON parse first (fast path)
     return JSON.parse(input);
   } catch (e) {
+    // 2. Fallback: Parse JS Object literal syntax
     try {
-      // 2. Try to clean up JS object syntax
-      let clean = input
-        // Remove comments
+      // Extract the object literal part: start at first { and end at last }
+      const firstBrace = input.indexOf('{');
+      const lastBrace = input.lastIndexOf('}');
+      
+      if (firstBrace === -1 || lastBrace === -1) return null;
+      
+      let snippet = input.substring(firstBrace, lastBrace + 1);
+      
+      // Step A: Remove comments (// ...) and (/* ... */)
+      snippet = snippet
         .replace(/\/\/.*$/gm, '')
-        // Remove variable declaration (const firebaseConfig = ...)
-        .replace(/^(const|let|var)\s+\w+\s*=\s*/, '')
-        // Remove trailing semicolon
-        .replace(/;$/, '')
-        // Quote unquoted keys (key: "value" -> "key": "value")
-        .replace(/(\w+):/g, '"$1":')
-        // Convert single quotes to double quotes
-        .replace(/'/g, '"')
-        // Remove trailing commas
-        .replace(/,(\s*})/g, '$1');
+        .replace(/\/\*[\s\S]*?\*\//g, '');
 
-      return JSON.parse(clean);
+      // Step B: Quote the specific Firebase keys
+      // This is safer than generic regex because it avoids replacing parts of URLs/values
+      const keys = [
+        'apiKey', 'authDomain', 'projectId', 'storageBucket', 
+        'messagingSenderId', 'appId', 'measurementId'
+      ];
+      keys.forEach(key => {
+        const regex = new RegExp(`\\b${key}\\s*:`, 'g');
+        snippet = snippet.replace(regex, `"${key}":`);
+      });
+
+      // Step C: Convert single-quoted values to double-quoted
+      // Look for: : 'value'
+      snippet = snippet.replace(/:\s*'([^']*)'/g, ': "$1"');
+
+      // Step D: Remove trailing commas before closing braces
+      snippet = snippet.replace(/,(\s*})/g, '$1');
+
+      return JSON.parse(snippet);
     } catch (e2) {
       console.error("Failed to parse Firebase config", e2);
       return null;
@@ -125,11 +142,11 @@ export { db };
 export const saveManualFirebaseConfig = (rawConfig: string) => {
   // Validate it parses before saving
   const parsed = parseFirebaseConfig(rawConfig);
-  if (parsed && parsed.apiKey) {
+  if (parsed && parsed.apiKey && parsed.projectId) {
     localStorage.setItem('mccia_firebase_config_manual', rawConfig);
     window.location.reload(); 
   } else {
-    alert("Invalid Firebase Configuration. Please check the snippet.");
+    alert("Invalid Firebase Configuration.\nPlease paste the full 'const firebaseConfig = { ... }' block.");
   }
 };
 
