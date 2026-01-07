@@ -10,6 +10,7 @@ export interface BrandContext {
   tone: Tone;
   businessDescription?: string;
   apiKey?: string;
+  firebaseConfigJSON?: string;
 }
 
 export interface HistoryItem {

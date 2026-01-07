@@ -1,5 +1,5 @@
 
-import { initializeApp, getApps } from "firebase/app";
+import { initializeApp, getApps, FirebaseApp } from "firebase/app";
 import { 
   getFirestore, 
   doc, 
@@ -17,43 +17,88 @@ import {
 import { BrandContext, HistoryItem } from "./types";
 
 /**
- * Safely access environment variables in the browser.
+ * Robust Environment Variable Loader
+ * Checks process.env, import.meta.env, and standard prefixes (VITE_, REACT_APP_)
  */
-const getSafeEnv = (key: string): string => {
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env) {
-      return process.env[key] || "";
+const getEnvVar = (key: string): string => {
+  const prefixes = ['', 'VITE_', 'REACT_APP_', 'NEXT_PUBLIC_'];
+  
+  // Check process.env
+  // @ts-ignore
+  if (typeof process !== 'undefined' && process.env) {
+    for (const p of prefixes) {
+      // @ts-ignore
+      const val = process.env[p + key];
+      if (val) return val;
     }
-  } catch (e) {}
+  }
+
+  // Check import.meta.env (Vite standard)
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    for (const p of prefixes) {
+      // @ts-ignore
+      const val = import.meta.env[p + key];
+      if (val) return val;
+    }
+  }
+  
   return "";
 };
 
-const firebaseConfig = {
-  apiKey: getSafeEnv("FIREBASE_API_KEY"),
-  projectId: getSafeEnv("FIREBASE_PROJECT_ID"),
-  authDomain: getSafeEnv("FIREBASE_AUTH_DOMAIN"),
-  storageBucket: getSafeEnv("FIREBASE_STORAGE_BUCKET"),
-  messagingSenderId: getSafeEnv("FIREBASE_MESSAGING_SENDER_ID"),
-  appId: getSafeEnv("FIREBASE_APP_ID")
+let db: Firestore | undefined;
+let app: FirebaseApp | undefined;
+
+const initFirebase = () => {
+  try {
+    // 1. Try Manual Config from LocalStorage (User pasted JSON)
+    const manualConfigStr = localStorage.getItem('mccia_firebase_config_manual');
+    if (manualConfigStr) {
+      try {
+        const config = JSON.parse(manualConfigStr);
+        if (config.apiKey && config.projectId) {
+          app = getApps().length === 0 ? initializeApp(config) : getApps()[0];
+          db = getFirestore(app);
+          console.log("Firebase initialized via manual config.");
+          return;
+        }
+      } catch (e) {
+        console.error("Invalid manual Firebase config", e);
+      }
+    }
+
+    // 2. Try Environment Variables
+    const envConfig = {
+      apiKey: getEnvVar("FIREBASE_API_KEY"),
+      projectId: getEnvVar("FIREBASE_PROJECT_ID"),
+      authDomain: getEnvVar("FIREBASE_AUTH_DOMAIN"),
+      storageBucket: getEnvVar("FIREBASE_STORAGE_BUCKET"),
+      messagingSenderId: getEnvVar("FIREBASE_MESSAGING_SENDER_ID"),
+      appId: getEnvVar("FIREBASE_APP_ID")
+    };
+
+    if (envConfig.apiKey && envConfig.projectId) {
+      app = getApps().length === 0 ? initializeApp(envConfig) : getApps()[0];
+      db = getFirestore(app);
+      console.log("Firebase initialized via environment variables.");
+    } else {
+      console.warn("Firebase credentials missing. App running in offline mode.");
+    }
+  } catch (error) {
+    console.error("Firebase startup error:", error);
+  }
 };
 
-let db: Firestore | undefined;
-
-// Initialize Firebase only if we have the critical keys
-try {
-  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-    db = getFirestore(app);
-    console.log("Firebase initialized successfully.");
-  } else {
-    console.warn("Firebase credentials missing. Using local mode (data saved to browser).");
-  }
-} catch (error) {
-  console.error("Firebase startup error:", error);
-}
+// Initialize immediately
+initFirebase();
 
 export { db };
+
+// Helper to save manual config and reload
+export const saveManualFirebaseConfig = (jsonConfig: string) => {
+  localStorage.setItem('mccia_firebase_config_manual', jsonConfig);
+  window.location.reload(); 
+};
 
 export const getClientId = () => {
   let id = localStorage.getItem('mccia_client_id');
@@ -66,7 +111,6 @@ export const getClientId = () => {
 
 export const saveUserProfile = async (brand: BrandContext) => {
   const clientId = getClientId();
-  // Always save locally first for instant availability
   localStorage.setItem('mccia_brand_profile', JSON.stringify(brand));
   
   if (!db) return;
@@ -81,7 +125,6 @@ export const saveUserProfile = async (brand: BrandContext) => {
 };
 
 export const getUserProfile = async (): Promise<BrandContext | null> => {
-  // Check local first
   const local = localStorage.getItem('mccia_brand_profile');
   if (local) {
     try { return JSON.parse(local); } catch (e) {}

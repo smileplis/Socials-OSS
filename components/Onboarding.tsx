@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { BrandContext } from '../types';
+import { saveManualFirebaseConfig } from '../firebase';
 
 interface Props {
   onSave: (brand: BrandContext) => void;
@@ -16,7 +17,8 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
     language: 'English',
     tone: 'Friendly',
     businessDescription: '',
-    apiKey: ''
+    apiKey: '',
+    firebaseConfigJSON: localStorage.getItem('mccia_firebase_config_manual') || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -25,6 +27,15 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
       alert("Please fill in all required fields.");
       return;
     }
+
+    // Save Firebase config if it changed
+    if (formData.firebaseConfigJSON) {
+      if (formData.firebaseConfigJSON !== localStorage.getItem('mccia_firebase_config_manual')) {
+        saveManualFirebaseConfig(formData.firebaseConfigJSON);
+        return; // Page will reload
+      }
+    }
+
     onSave(formData);
   };
 
@@ -45,7 +56,7 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
             <input 
               type="password"
               className="w-full bg-white border-2 border-blue-100 rounded-xl px-4 py-2 outline-none focus:border-blue-500 transition-all text-slate-900 placeholder:text-slate-300 font-bold text-sm"
-              placeholder="Paste your API key here..."
+              placeholder="Paste your Gemini API key here..."
               value={formData.apiKey || ''}
               onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
             />
@@ -129,8 +140,28 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
               </select>
             </div>
           </div>
+          
+          <div className="pt-4 border-t border-slate-100">
+            <details className="group">
+              <summary className="text-xs font-black text-slate-400 uppercase tracking-widest cursor-pointer list-none flex items-center gap-2">
+                <span className="group-open:rotate-90 transition-transform">▸</span>
+                Cloud Sync (Optional)
+              </summary>
+              <div className="mt-4 space-y-2">
+                 <p className="text-[10px] text-slate-400 leading-normal">
+                   If environment variables aren't working, paste your Firebase config JSON here to sync data between devices.
+                 </p>
+                 <textarea 
+                   className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 font-mono text-[10px] text-slate-600 outline-none focus:border-blue-500 min-h-[100px]"
+                   placeholder='{"apiKey": "...", "projectId": "..."}'
+                   value={formData.firebaseConfigJSON || ''}
+                   onChange={e => setFormData({ ...formData, firebaseConfigJSON: e.target.value })}
+                 />
+              </div>
+            </details>
+          </div>
 
-          <div className="pt-4 space-y-4">
+          <div className="pt-2 space-y-4">
             <button 
               type="submit" 
               className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 rounded-[1.5rem] font-black text-lg shadow-xl hover:shadow-blue-200 active:scale-95 hover:-translate-y-0.5 transition-all"
