@@ -149,11 +149,11 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
               </summary>
               <div className="mt-4 space-y-2">
                  <p className="text-[10px] text-slate-400 leading-normal">
-                   If environment variables aren't working, paste your Firebase config JSON here to sync data between devices.
+                   Paste the full "firebaseConfig" code block from your Firebase Console here.
                  </p>
                  <textarea 
                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-2 font-mono text-[10px] text-slate-600 outline-none focus:border-blue-500 min-h-[100px]"
-                   placeholder='{"apiKey": "...", "projectId": "..."}'
+                   placeholder={`const firebaseConfig = {\n  apiKey: "...",\n  projectId: "..."\n};`}
                    value={formData.firebaseConfigJSON || ''}
                    onChange={e => setFormData({ ...formData, firebaseConfigJSON: e.target.value })}
                  />

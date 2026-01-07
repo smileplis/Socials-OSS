@@ -18,12 +18,10 @@ import { BrandContext, HistoryItem } from "./types";
 
 /**
  * Robust Environment Variable Loader
- * Checks process.env, import.meta.env, and standard prefixes (VITE_, REACT_APP_)
  */
 const getEnvVar = (key: string): string => {
   const prefixes = ['', 'VITE_', 'REACT_APP_', 'NEXT_PUBLIC_'];
   
-  // Check process.env
   // @ts-ignore
   if (typeof process !== 'undefined' && process.env) {
     for (const p of prefixes) {
@@ -33,7 +31,6 @@ const getEnvVar = (key: string): string => {
     }
   }
 
-  // Check import.meta.env (Vite standard)
   // @ts-ignore
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     for (const p of prefixes) {
@@ -46,25 +43,55 @@ const getEnvVar = (key: string): string => {
   return "";
 };
 
+/**
+ * Smart Parser for Firebase Config
+ * Handles both strict JSON and the raw JS snippet copied from Firebase Console
+ */
+const parseFirebaseConfig = (input: string) => {
+  if (!input) return null;
+  
+  try {
+    // 1. Try strict JSON parse first
+    return JSON.parse(input);
+  } catch (e) {
+    try {
+      // 2. Try to clean up JS object syntax
+      let clean = input
+        // Remove comments
+        .replace(/\/\/.*$/gm, '')
+        // Remove variable declaration (const firebaseConfig = ...)
+        .replace(/^(const|let|var)\s+\w+\s*=\s*/, '')
+        // Remove trailing semicolon
+        .replace(/;$/, '')
+        // Quote unquoted keys (key: "value" -> "key": "value")
+        .replace(/(\w+):/g, '"$1":')
+        // Convert single quotes to double quotes
+        .replace(/'/g, '"')
+        // Remove trailing commas
+        .replace(/,(\s*})/g, '$1');
+
+      return JSON.parse(clean);
+    } catch (e2) {
+      console.error("Failed to parse Firebase config", e2);
+      return null;
+    }
+  }
+};
+
 let db: Firestore | undefined;
 let app: FirebaseApp | undefined;
 
 const initFirebase = () => {
   try {
-    // 1. Try Manual Config from LocalStorage (User pasted JSON)
+    // 1. Try Manual Config from LocalStorage
     const manualConfigStr = localStorage.getItem('mccia_firebase_config_manual');
-    if (manualConfigStr) {
-      try {
-        const config = JSON.parse(manualConfigStr);
-        if (config.apiKey && config.projectId) {
-          app = getApps().length === 0 ? initializeApp(config) : getApps()[0];
-          db = getFirestore(app);
-          console.log("Firebase initialized via manual config.");
-          return;
-        }
-      } catch (e) {
-        console.error("Invalid manual Firebase config", e);
-      }
+    const manualConfig = parseFirebaseConfig(manualConfigStr || '');
+
+    if (manualConfig && manualConfig.apiKey && manualConfig.projectId) {
+      app = getApps().length === 0 ? initializeApp(manualConfig) : getApps()[0];
+      db = getFirestore(app);
+      console.log("Firebase initialized via manual config.");
+      return;
     }
 
     // 2. Try Environment Variables
@@ -95,9 +122,15 @@ initFirebase();
 export { db };
 
 // Helper to save manual config and reload
-export const saveManualFirebaseConfig = (jsonConfig: string) => {
-  localStorage.setItem('mccia_firebase_config_manual', jsonConfig);
-  window.location.reload(); 
+export const saveManualFirebaseConfig = (rawConfig: string) => {
+  // Validate it parses before saving
+  const parsed = parseFirebaseConfig(rawConfig);
+  if (parsed && parsed.apiKey) {
+    localStorage.setItem('mccia_firebase_config_manual', rawConfig);
+    window.location.reload(); 
+  } else {
+    alert("Invalid Firebase Configuration. Please check the snippet.");
+  }
 };
 
 export const getClientId = () => {
