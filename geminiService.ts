@@ -3,7 +3,8 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { BrandContext, HistoryItem, MonthlyPlanItem } from "./types";
 
 /**
- * This service uses the API key provided by the user in the BrandContext.
+ * This service strictly uses the API key provided by the user in the BrandContext.
+ * If no key is provided, the calls will fail with a clear error.
  */
 
 const getSystemInstruction = (brand: BrandContext) => `
@@ -25,7 +26,7 @@ Rules:
 `;
 
 const getAI = (apiKey: string) => {
-  if (!apiKey) throw new Error("API Key is required to use this feature.");
+  if (!apiKey) throw new Error("A Gemini API Key is required. Please add one in settings.");
   return new GoogleGenAI({ apiKey });
 };
 
