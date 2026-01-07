@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BrandContext } from '../types';
 
@@ -14,7 +15,8 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
     city: '',
     language: 'English',
     tone: 'Friendly',
-    businessDescription: ''
+    businessDescription: '',
+    apiKey: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,6 +40,25 @@ const Onboarding: React.FC<Props> = ({ onSave, initialData, onCancel }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2 bg-blue-50 p-4 rounded-2xl border border-blue-100">
+            <label className="block text-xs font-black text-blue-600 ml-1 uppercase tracking-widest">Gemini API Key</label>
+            <input 
+              type="password"
+              className="w-full bg-white border-2 border-blue-100 rounded-xl px-4 py-2 outline-none focus:border-blue-500 transition-all text-slate-900 placeholder:text-slate-300 font-bold text-sm"
+              placeholder="Paste your API key here..."
+              value={formData.apiKey || ''}
+              onChange={e => setFormData({ ...formData, apiKey: e.target.value })}
+            />
+            <a 
+              href="https://aistudio.google.com/app/apikey" 
+              target="_blank" 
+              rel="noreferrer"
+              className="text-[10px] font-bold text-blue-500 hover:text-blue-700 underline ml-1 block mt-1"
+            >
+              Get a free API key from Google AI Studio
+            </a>
+          </div>
+
           <div className="space-y-2">
             <label className="block text-xs font-black text-slate-400 ml-1 uppercase tracking-widest">Business Name*</label>
             <input 

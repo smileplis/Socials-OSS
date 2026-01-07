@@ -1,3 +1,4 @@
+
 export type Language = 'English' | 'Hinglish' | 'Hindi';
 export type Tone = 'Professional' | 'Friendly' | 'Local';
 
@@ -8,6 +9,7 @@ export interface BrandContext {
   language: Language;
   tone: Tone;
   businessDescription?: string;
+  apiKey?: string;
 }
 
 export interface HistoryItem {

@@ -1,8 +1,9 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { BrandContext, HistoryItem, MonthlyPlanItem } from "./types";
 
 /**
- * This service uses the API key from process.env.API_KEY as per the requirements.
+ * This service uses the API key from the brand context if available, otherwise falls back to process.env.API_KEY.
  */
 
 const getSystemInstruction = (brand: BrandContext) => `
@@ -24,12 +25,16 @@ Rules:
 7. For post generation, include emojis sparingly to keep it professional.
 `;
 
-const getAI = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getAI = (userKey?: string) => {
+  const key = userKey || process.env.API_KEY;
+  if (!key) {
+    throw new Error("API Key is missing. Please add your Gemini API Key in the settings.");
+  }
+  return new GoogleGenAI({ apiKey: key });
 };
 
 export const generateTodayPost = async (brand: BrandContext, history: HistoryItem[]) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const previousThemes = history.slice(0, 5).map(h => h.content).join("\n");
   
   const prompt = `Give me a post for today. 
@@ -49,7 +54,7 @@ export const generateTodayPost = async (brand: BrandContext, history: HistoryIte
 };
 
 export const generateImagePromptForPost = async (brand: BrandContext, postContent: string) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Based on: "${postContent}", generate a structured image prompt JSON.`,
@@ -80,7 +85,7 @@ export const generateImagePromptForPost = async (brand: BrandContext, postConten
 };
 
 export const generateOffer = async (brand: BrandContext, productName: string, details: string) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const prompt = `Create an offer for "${productName}". Details: ${details}. Provide WhatsApp and Instagram versions.`;
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
@@ -91,7 +96,7 @@ export const generateOffer = async (brand: BrandContext, productName: string, de
 };
 
 export const generateReply = async (brand: BrandContext, customerMessage: string) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Reply to: "${customerMessage}". Focus on helpful intent.`,
@@ -101,7 +106,7 @@ export const generateReply = async (brand: BrandContext, customerMessage: string
 };
 
 export const generateBroadcast = async (brand: BrandContext) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Short WhatsApp broadcast message for today. Non-spammy.`,
@@ -111,7 +116,7 @@ export const generateBroadcast = async (brand: BrandContext) => {
 };
 
 export const generateImagePrompt = async (brand: BrandContext, topic: string) => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: `Generate an image prompt for: ${topic}. Format as JSON.`,
@@ -141,7 +146,7 @@ export const generateImagePrompt = async (brand: BrandContext, topic: string) =>
 };
 
 export const generateMonthlyPlan = async (brand: BrandContext): Promise<MonthlyPlanItem[]> => {
-  const ai = getAI();
+  const ai = getAI(brand.apiKey);
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
     contents: "30-day social media plan JSON.",
