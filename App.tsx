@@ -21,37 +21,6 @@ import {
   ChevronLeftIcon
 } from './components/Icons';
 
-class ErrorBoundary extends React.Component<{}, { hasError: boolean; error?: Error; info?: React.ErrorInfo }> {
-  constructor(props: {}) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('Uncaught error in component tree:', error, info);
-    this.setState({ error, info });
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
-          <h2 className="text-xl font-black text-red-600">Something went wrong</h2>
-          <pre className="mt-4 text-sm text-slate-700 whitespace-pre-wrap max-w-full overflow-auto bg-slate-50 p-4 rounded">{String(this.state.error || 'Unknown error')}{this.state.info ? '\n' + this.state.info.componentStack : ''}</pre>
-          <div className="mt-4">
-            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-600 text-white rounded">Reload</button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children as React.ReactElement;
-  }
-}
-
 const App: React.FC = () => {
   const [brand, setBrand] = useState<BrandContext | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -74,7 +43,6 @@ const App: React.FC = () => {
       }
     };
     initApp();
-    console.log('App mounted');
   }, []);
 
   const handleSaveBrand = async (newBrand: BrandContext) => {
